@@ -33,6 +33,7 @@
 - tests/repositories/
 - tests/models/
 - tests/reports/
+- scripts/          # 启动脚本、部署脚本
 
 然后运行：git init
 
@@ -149,6 +150,150 @@
 - 应用端口
 - 密钥/Token
 - 第三方服务配置
+
+---
+
+# 步骤 9.5：生成 README.md 框架
+
+生成项目 README.md 框架，包含以下部分：
+
+```markdown
+# [项目名称]
+
+> [项目简介，一句话说明项目用途]
+
+## 技术栈
+
+- [编程语言] [版本]
+- [Web框架]
+- [数据库]
+- [其他]
+
+## 快速开始
+
+### 环境要求
+
+- [编程环境要求]
+- [数据库要求]
+
+### 安装
+
+\`\`\`bash
+# 克隆项目
+git clone [项目地址]
+cd [项目名称]
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填写配置
+\`\`\`
+
+### 运行
+
+\`\`\`bash
+# 开发环境启动
+# TODO: 在 C0 阶段补充完整启动命令
+
+\`\`\`
+
+## 项目结构
+
+\`\`\`
+[项目目录结构，在 C0 阶段补充]
+\`\`\`
+
+## API 文档
+
+启动服务后访问 [API 文档地址]
+
+## 开发指南
+
+- 代码规范：[待补充]
+- 测试：[待补充]
+- 部署：[待补充，C0 阶段补充]
+
+## 许可证
+
+[待选择]
+\`\`\`
+
+完成后展示 README.md 内容并暂停等待确认。
+
+---
+
+# 步骤 9.6：生成 .gitignore
+
+根据技术栈生成 `.gitignore`，包含：
+
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# 环境变量
+.env
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# AI
+.boundary/
+.ai-rules
+.aiignore
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+.DS_Store
+*.tmp
+```
+
+完成后展示 .gitignore 内容并暂停等待确认。
+
+---
+
+# 步骤 9.7：生成启动脚本框架
+
+生成基础启动脚本 `scripts/dev.sh`：
+
+```bash
+#!/bin/bash
+# 开发环境启动脚本
+# TODO: 在 C0 阶段补充完整
+
+echo "Starting development server..."
+# uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+确保脚本有执行权限。
+
+完成后展示脚本内容并暂停等待确认。
 
 ---
 

@@ -1,213 +1,140 @@
-# Vibe Coding 后端开发实战教程
+# Backend Vibe Coding - 后端 AI 编程助手
 
-> 基于 Vibe Coding 方法论的后端开发完整流程模板
+> 基于多种 AI 编程方法论的后端开发提示词库
 
 ---
 
-## 实战教程概览
+## 项目概述
 
-```mermaid
-flowchart LR
-    A[开始] --> B[阶段A: 项目初始化]
-    B --> C[阶段B: 文档生成]
-    C --> D[阶段C: 代码生成]
-    D --> E[结束]
+本项目是一套结构化的 AI 编程提示词库，专为后端 API 开发设计。它整合了 **VibeCoding**、**GSD**、**SpecCoding** 三种方法论的优点，提供从项目初始化到代码生成的完整工作流。
 
-    subgraph PhaseA [阶段A：项目初始化（静态文件）]
-        A1[A_init]
-    end
+### 核心特点
 
-    subgraph PhaseB [阶段B：文档生成（动态文档）]
-        B1[B1_PRD]
-        B2[B2_FEATURES]
-        B3[B3_API]
-        B4[B4_SCHEMA]
-        B5[B5_SERVICE]
-        B6[B6_TEST]
-    end
+| 特点 | 说明 | 借鉴来源 |
+|------|------|----------|
+| 🔄 **阶段化执行** | A→B→C 分阶段，每步确认 | GSD |
+| 📝 **文档驱动** | 先生成设计文档，再生成代码 | SpecCoding |
+| 🚀 **快速通道** | 小改动走简化流程，不走完整 13 步 | GitLab Issue 思想 |
+| 🔁 **上下文重置** | B→C 阶段间清空会话，保持 AI 质量 | GSD |
+| 📦 **原子提交** | 每层独立 commit，便于回滚 | GSD |
 
-    subgraph PhaseC [阶段C：代码生成（TDD）]
-        C1[C1_Models]
-        C2[C2_Repository]
-        C3[C3_Service]
-        C4[C4_API]
-        C5[C5_Frontend]
-        C6[C6_Report]
-    end
+---
 
-    B --> A1
-    A1 --> B1
-    B1 --> B2
-    B2 --> B3
-    B3 --> B4
-    B4 --> B5
-    B5 --> B6
-    B6 --> C1
-    C1 --> C2
-    C2 --> C3
-    C3 --> C4
-    C4 --> C5
-    C5 --> C6
-    C6 --> E
+## 快速导航
 
-    style A fill:#e1f5fe
-    style E fill:#e1f5fe
-    style A1 fill:#fff3e0
-    style B1 fill:#e8f5e9
-    style B2 fill:#e8f5e9
-    style B3 fill:#e8f5e9
-    style B4 fill:#e8f5e9
-    style B5 fill:#e8f5e9
-    style B6 fill:#e8f5e9
-    style C1 fill:#f3e5f5
-    style C2 fill:#f3e5f5
-    style C3 fill:#f3e5f5
-    style C4 fill:#f3e5f5
-    style C5 fill:#e0f7fa
-    style C6 fill:#ffebee
+```
+backend_vibe_coding/
+├── README.md                 ← 本文件（项目总览）
+├── prompts/                  ← 提示词目录
+│   ├── A_init.txt           [项目初始化]
+│   ├── B1-B6_*.txt          [文档生成阶段]
+│   ├── C0-C6_*.txt          [代码生成阶段]
+│   └── D_quick_fix.txt      [快速通道]
+└── docs/                     ← 文档目录
+    ├── 01-方法论对比.md      [三种方法论详解]
+    ├── 02-快速开始.md        [如何使用]
+    ├── 03-开发路线.md        [升级优化计划]
+    ├── flowsheet.md         [流程图]
+    └── README.md            [详细使用说明]
 ```
 
 ---
 
-## 使用说明
+## 三种方法论对比
 
-```mermaid
-flowchart LR
-    S[开始] --> S1[复制 Prompt]
-    S1 --> S2[粘贴到 AI]
-    S2 --> S3[对话确认]
-    S3 --> S4{确认通过?}
-    S4 -->|否| S3
-    S4 -->|是| S5[下一个 Prompt]
-    S5 --> S1
+我们融合了三种主流 AI 编程方法论的优点：
 
-    style S fill:#e1f5fe
-    style S4 fill:#fff9c4
-```
+### VibeCoding - 快速原型
+- 核心理念：跟着感觉走，能跑就行
+- 优势：快速迭代，高频反馈
+- 我们借鉴：对话式交互、逐步确认
 
-### 使用步骤
+### GSD - 系统化执行
+- 核心理念：阶段化 + 上下文重置
+- 优势：解决长对话质量下降问题
+- 我们借鉴：轻量级通道、原子提交、STATE.md
 
-1. **按顺序使用 Prompt**：A → B1~B6 → C1~C6
-2. **复制 Prompt** → 粘贴到 AI（Claude / Cursor / opencode）
-3. **逐步确认**：每个文档/代码生成后确认再继续
+### SpecCoding - 规范驱动
+- 核心理念：规范先行，严格遵循
+- 优势：输出质量高且一致
+- 我们借鉴：文档驱动、DDD 分层架构
 
----
-
-## 顺序选择建议
-
-### B阶段默认顺序
-
-```
-B1(PRD) → B2(FEATURES) → B3(API) → B4(SCHEMA) → B5(SERVICE) → B6(TEST)
-```
-
-这个顺序适合大多数Web API项目，遵循 **需求→功能→接口→数据→业务→测试** 的渐进设计逻辑。
-
-### 灵活调整
-
-| 项目类型 | 建议顺序 | 原因 |
-|----------|----------|------|
-| **Web API（默认）** | API → SCHEMA | 接口先行，以用户体验为中心，后期优化数据模型 |
-| **数据密集型** | SCHEMA → API | 先保证数据一致性，再设计接口 |
-| **BFF/前端驱动** | API更靠后 | 等待前端明确需求后再设计接口 |
-| **复杂业务逻辑** | SERVICE更靠前 | 业务逻辑复杂需要提前梳理 |
-
-### 自定义顺序
-
-如果需要调整顺序：
-
-1. 修改对应 Prompt 文件中的 **阶段衔接** 部分
-2. 更新 README 和 flowsheet 中的流程图
-3. 确保每个 Prompt 读取的输入文档顺序也相应调整
-
-> 注意：SCHEMA(B4) 是 C1~C4 多个阶段的共同输入，如果调整顺序，需要确保后续阶段的输入文档路径正确。
+详细对比见：[docs/01-方法论对比.md](docs/01-方法论对比.md)
 
 ---
 
-## Prompt 文件列表
+## 使用流程
 
-| 阶段 | 文件名 | 说明 | 输出 |
-|------|--------|------|------|
-| **A** | A_init.txt | 项目初始化 | 静态文件 |
-| **B** | B1_PRD.txt | 需求文档 | PRD.md |
-| | B2_FEATURES.txt | 功能梳理 | FEATURES.md |
-| | B3_API.txt | 接口设计 | API_DESIGN.md |
-| | B4_SCHEMA.txt | 数据模型 | SCHEMA.md |
-| | B5_SERVICE.txt | 服务层设计 | SERVICE.md |
-| | B6_TEST.txt | 测试设计 | TEST_DESIGN.md |
-| **C** | C1_Models.txt | 数据模型代码 | models/, schemas/ |
-| | C2_Repository.txt | Repository代码 | repositories/ + 测试 |
-| | C3_Service.txt | Service代码 | services/ + 测试 |
-| | C4_API.txt | API代码 | api/ + 测试 |
-| | C5_Frontend.txt | 前端验证 | Streamlit 前端 |
-| | C6_Report.txt | 测试报告 | TEST_REPORT.md |
-
----
-
-## 最终目录结构
+### 新功能开发（完整流程）
 
 ```
-project-name/
-├── .boundary/              # Prompt A 生成
-│   ├── scope.md
-│   └── tech-stack.md
-├── .ai-rules              # Prompt A 生成
-├── .aiignore              # Prompt A 生成
-├── .env.example           # Prompt A 生成
-├── docs/                  # Prompt B1~B6 生成
-│   ├── PRD.md             # B1
-│   ├── FEATURES.md        # B2
-│   ├── API_DESIGN.md      # B3
-│   ├── SCHEMA.md          # B4
-│   ├── SERVICE.md         # B5
-│   ├── TEST_DESIGN.md     # B6
-│   └── TEST_REPORT.md     # C6
-├── src/                   # Prompt C1~C4 生成
-│   ├── api/               # C4
-│   ├── services/          # C3
-│   ├── repositories/      # C2
-│   ├── models/            # C1
-│   ├── schemas/           # C1
-│   ├── core/
-│   └── utils/
-├── frontend/               # Prompt C5 生成
-│   └── app.py             # Streamlit 前端
-├── tests/                 # Prompt C1~C4 生成
-│   ├── api/
-│   ├── services/
-│   ├── repositories/
-│   └── models/
-└── pytest.ini             # C2/C4 自动生成
+┌─────────────────────────────────────────────────────────────┐
+│                     A → B1~B6 → C0 → C1~C6                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  A_init: 项目初始化（静态文件、目录结构）                     │
+│  ─────────────────────────────────────────────────────────   │
+│  B1-B6: 文档生成阶段（PRD、API设计、数据模型、测试设计）       │
+│  ─────────────────────────────────────────────────────────   │
+│  [上下文重置] ← 清空会话，保持 AI 质量                       │
+│  ─────────────────────────────────────────────────────────   │
+│  C0: 基础设施（main.py、数据库配置、Docker）                  │
+│  C1-C6: 代码生成阶段（Models → Repository → Service → API）   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Bug 修复 / 小改动（快速通道）
+
+```
+D_quick_fix: 直接定位问题 → 修复 → 验证 → 提交（5-8 步）
 ```
 
 ---
 
-## 快速检查清单
+## 开始使用
 
-### 阶段A：项目初始化
-- [ ] 目录结构已创建
-- [ ] .boundary/scope.md 已填写
-- [ ] .boundary/tech-stack.md 已填写
-- [ ] .ai-rules 已配置
-- [ ] .aiignore 已创建
-
-### 阶段B：文档生成
-- [ ] B1：PRD.md（S-001...、BR-001...）
-- [ ] B2：FEATURES.md（F-001...）
-- [ ] B3：API_DESIGN.md（接口列表、JSON示例）
-- [ ] B4：SCHEMA.md（实体定义、ER图）
-- [ ] B5：SERVICE.md（服务定义、流程图）
-- [ ] B6：TEST_DESIGN.md（测试矩阵、分层策略）
-
-### 阶段C：代码生成
-- [ ] C1：数据模型层 + 迁移成功
-- [ ] C2：Repository层 + 测试通过
-- [ ] C3：Service层 + 测试通过
-- [ ] C4：API层 + 测试通过
-- [ ] C5：Streamlit 前端验证
-- [ ] C6：TEST_REPORT.md
+1. **了解方法论**：阅读 [docs/01-方法论对比.md](docs/01-方法论对比.md)
+2. **快速开始**：按照 [docs/02-快速开始.md](docs/02-快速开始.md) 操作
+3. **查看流程图**：参考 [docs/flowsheet.md](docs/flowsheet.md)
 
 ---
 
-*版本：v4.2*
-*更新：2026-03-04*
+## 版本历史
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| v5.2 | 2026-03-04 | 完善 A_init 和 C0，添加 README、gitignore、Docker |
+| v5.1 | 2026-03-04 | 新增 C0 基础设施阶段，解决 main.py 和数据库配置缺失 |
+| v5.0 | 2026-03-04 | 新增 D 快速通道，上下文重置机制 |
+
+详细优化计划见：[docs/03-开发路线.md](docs/03-开发路线.md)
+
+---
+
+## 开发者指南
+
+### 给使用者的说明
+
+- 每个提示词都是独立文件，按顺序使用
+- 复制提示词内容到 AI（Claude Code / Cursor / OpenCode）
+- 每步完成后确认再继续
+
+### 给维护者的说明
+
+**待优化项**（见 docs/03-开发路线.md）：
+- [ ] 原子提交机制（C1-C4 独立 commit）
+- [ ] EARS 需求格式支持
+- [ ] 4 条偏差处理规则
+- [ ] STATUS.md 进度跟踪系统
+
+---
+
+## 许可证
+
+MIT
+
+---
+
+*最后更新：2026-03-04*
+*本项目持续优化中，欢迎反馈建议*
