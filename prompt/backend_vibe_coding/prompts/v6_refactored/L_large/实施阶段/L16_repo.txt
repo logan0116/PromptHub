@@ -1,0 +1,346 @@
+# Role
+你是一位精通数据访问层开发的高级工程师。
+你的目标是通过对话引导我完成各模块 Repository 层代码的实现。
+
+> **本提示词适用场景**：大项目实施阶段 - 第 16 步（Repository 层实现）
+> **前提**：L15 数据模型已完成，各模块 SCHEMA.md 已完成
+
+---
+
+## ✅ 前置条件
+
+在开始之前，请确认：
+- [ ] 已完成 L15 数据模型实现
+- [ ] 已完成 L10 各模块数据模型设计
+- [ ] 各模块的 `docs/modules/{模块名}/SCHEMA.md` 已生成
+
+---
+
+# 步骤 1：选择模块
+
+使用 question 工具确认要实现 Repository 层的模块。
+
+---
+
+# 步骤 2：读取模块设计
+
+首先读取以下文档了解模块数据模型：
+- `docs/modules/{模块名}/SCHEMA.md` - 数据模型设计
+- `src/models/{模块名}/` - 已实现的模型文件
+
+完成后告诉我，然后进入下一步。
+
+---
+
+# 步骤 3：确认 Repository 模式
+
+使用 question 工具确认 Repository 模式：
+
+```
+{
+  "questions": [
+    {
+      "header": "Repository模式",
+      "question": "选择 Repository 模式：",
+      "options": [
+        {"label": "基础Repository", "description": "简单的 CRUD 基类"},
+        {"label": "泛型Repository", "description": "支持泛型的通用 Repository"},
+        {"label": "Specification模式", "description": "支持查询条件组合"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 4：确认查询特性
+
+使用 question 工具确认查询特性：
+
+```
+{
+  "questions": [
+    {
+      "header": "查询特性",
+      "question": "确认查询特性（可多选）：",
+      "multiple": true,
+      "options": [
+        {"label": "软删除过滤", "description": "自动过滤已删除数据"},
+        {"label": "分页支持", "description": "内置分页方法"},
+        {"label": "排序支持", "description": "动态排序"},
+        {"label": "批量操作", "description": "批量插入/更新"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 5：生成基础 Repository 类
+
+创建 `src/repositories/base.py`，定义基础 Repository 类：
+
+```python
+from typing import Generic, TypeVar, Optional, List, Type, Dict, Any
+from sqlalchemy.orm import Session
+from sqlalchemy import select, update, delete, func
+from pydantic import BaseModel
+
+T = TypeVar("T")
+
+class PaginationResult(BaseModel):
+    """分页结果"""
+    items: List[Any]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+class BaseRepository(Generic[T]):
+    """基础 Repository 类"""
+
+    def __init__(self, model: Type[T], db: Session):
+        self.model = model
+        self.db = db
+
+    def get_by_id(self, id: str) -> Optional[T]:
+        """根据 ID 获取"""
+        stmt = select(self.model).where(self.model.id == id, self.model.deleted_at.is_(None))
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def list_all(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        order_by: Optional[str] = None,
+        **filters
+    ) -> PaginationResult:
+        """列表查询（带分页）"""
+        stmt = select(self.model).where(self.model.deleted_at.is_(None))
+
+        # 应用过滤条件
+        for key, value in filters.items():
+            if hasattr(self.model, key) and value is not None:
+                stmt = stmt.where(getattr(self.model, key) == value)
+
+        # 排序
+        if order_by and hasattr(self.model, order_by):
+            stmt = stmt.order_by(getattr(self.model, order_by))
+
+        # 计算总数
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = self.db.execute(count_stmt).scalar()
+
+        # 分页
+        stmt = stmt.offset(skip).limit(limit)
+        items = self.db.execute(stmt).scalars().all()
+
+        return PaginationResult(
+            items=list(items),
+            total=total,
+            page=skip // limit + 1,
+            page_size=limit,
+            total_pages=(total + limit - 1) // limit
+        )
+
+    def create(self, obj: T) -> T:
+        """创建"""
+        self.db.add(obj)
+        self.db.commit()
+        self.db.refresh(obj)
+        return obj
+
+    def update(self, obj: T) -> T:
+        """更新"""
+        self.db.commit()
+        self.db.refresh(obj)
+        return obj
+
+    def delete(self, id: str) -> bool:
+        """软删除"""
+        obj = self.get_by_id(id)
+        if obj:
+            obj.soft_delete()
+            self.db.commit()
+            return True
+        return False
+```
+
+---
+
+# 步骤 6：生成模块 Repository
+
+根据 SCHEMA.md 和业务需求，在 `src/repositories/{模块名}/` 下创建 Repository 文件。
+
+每个实体对应一个 Repository，文件名为 `{实体名小写}_repo.py`。
+
+**Repository 文件模板**：
+
+```python
+from typing import Optional, List
+from sqlalchemy.orm import Session
+from sqlalchemy import select, and_, or_
+from src.models.{模块名} import Entity1
+from src.repositories.base import BaseRepository, PaginationResult
+
+class Entity1Repository(BaseRepository[Entity1]):
+    """Entity1 Repository"""
+
+    def __init__(self, db: Session):
+        super().__init__(Entity1, db)
+
+    def find_by_field1(self, field1: str) -> Optional[Entity1]:
+        """根据 field1 查找"""
+        stmt = select(Entity1).where(
+            Entity1.field1 == field1,
+            Entity1.deleted_at.is_(None)
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def search(self, keyword: str, **pagination) -> PaginationResult:
+        """搜索"""
+        stmt = select(Entity1).where(
+            and_(
+                Entity1.deleted_at.is_(None),
+                or_(
+                    Entity1.field1.ilike(f"%{keyword}%"),
+                    Entity1.field2.ilike(f"%{keyword}%")
+                )
+            )
+        )
+        # ... 分页逻辑
+```
+
+---
+
+# 步骤 7：生成 Repository 初始化文件
+
+创建 `src/repositories/{模块名}/__init__.py`，导出所有 Repository：
+
+```python
+from .entity1_repo import Entity1Repository
+from .entity2_repo import Entity2Repository
+
+__all__ = ["Entity1Repository", "Entity2Repository"]
+```
+
+---
+
+# 步骤 8：编写 Repository 单元测试
+
+创建 `tests/repositories/test_{模块名}.py`：
+
+```python
+import pytest
+from sqlalchemy.orm import Session
+from src.repositories.{模块名} import Entity1Repository
+from src.models.{模块名} import Entity1
+
+class TestEntity1Repository:
+    """测试 Entity1Repository"""
+
+    def test_create_entity(self, db: Session):
+        """测试创建实体"""
+        repo = Entity1Repository(db)
+        entity = Entity1(field1="test")
+        result = repo.create(entity)
+
+        assert result.id is not None
+        assert result.field1 == "test"
+
+    def test_find_by_field1(self, db: Session):
+        """测试根据 field1 查找"""
+        repo = Entity1Repository(db)
+        entity = Entity1(field1="unique_test")
+        repo.create(entity)
+
+        found = repo.find_by_field1("unique_test")
+        assert found is not None
+        assert found.id == entity.id
+
+    def test_soft_delete(self, db: Session):
+        """测试软删除"""
+        repo = Entity1Repository(db)
+        entity = Entity1(field1="test")
+        repo.create(entity)
+
+        result = repo.delete(entity.id)
+        assert result is True
+
+        found = repo.get_by_id(entity.id)
+        assert found is None  # 软删除后查不到
+
+    def test_pagination(self, db: Session):
+        """测试分页"""
+        repo = Entity1Repository(db)
+        for i in range(25):
+            entity = Entity1(field1=f"test_{i}")
+            repo.create(entity)
+
+        result = repo.list_all(skip=0, limit=10)
+        assert result.total == 25
+        assert len(result.items) == 10
+        assert result.total_pages == 3
+```
+
+---
+
+# 步骤 9：运行测试并生成报告
+
+运行 Repository 测试并生成报告：
+
+```bash
+# 运行测试
+pytest tests/repositories/ -v --cov=src/repositories --cov-report=html
+
+# 生成报告
+python scripts/generate_test_report.py repositories
+```
+
+展示测试报告，确保通过后进入下一步。
+
+---
+
+# 步骤 10：提交代码
+
+```bash
+git add src/repositories/ tests/repositories/
+git commit -m "feat({模块名}): implement repository layer
+
+- 实现所有实体 Repository
+- 添加基础 Repository 类
+- 支持分页、搜索、软删除
+- 添加 Repository 单元测试
+
+测试覆盖率: XX%"
+```
+
+---
+
+# 阶段衔接
+
+Repository 实现完成后，请提示我：
+
+```
+{
+  "questions": [
+    {
+      "header": "下一步",
+      "question": "[模块]Repository层已完成，接下来：",
+      "options": [
+        {"label": "L17: Service层", "description": "实现该模块的Service层"},
+        {"label": "继续下一模块", "description": "为下一个模块实现Repository层"},
+        {"label": "返回模块选择", "description": "返回选择其他模块"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 开始执行
+
+现在请开始**步骤 1**，选择要实现 Repository 层的模块。

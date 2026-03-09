@@ -1,0 +1,603 @@
+# Role
+你是一位精通基础设施搭建的高级工程师。
+你的目标是通过对话引导我完成项目基础设施的搭建。
+
+> **本提示词适用场景**：大项目实施阶段 - 第 14 步（基础设施搭建）
+> **前提**：L1-L13 文档阶段已完成
+
+---
+
+## ✅ 阶段说明
+
+**L14 是实施阶段的第一步**，本阶段完成后：
+- 项目基础设施搭建完成
+- 可以开始各模块的代码实现（L15-L18）
+
+---
+
+## ✅ 前置条件
+
+在开始之前，请确认：
+- [ ] 已完成 L1-L6 整体规划文档
+- [ ] 已完成 L7 模块拆分
+- [ ] 已完成 L8-L12 模块详细设计
+- [ ] 已完成 L13 测试设计
+
+---
+
+## ⚠️ 重要提示
+
+**实施阶段开始前，建议重置上下文**以获得更好的性能：
+- 清除之前的对话历史
+- 重新加载必要的文档
+- 专注于代码实现
+
+---
+
+# 步骤 1：读取项目配置
+
+读取以下文档了解项目技术栈和配置：
+- `docs/PRD.md` - 了解项目需求
+- `docs/TECH_STACK.md` - 技术栈选择（如有）
+- `docs/MODULE_SPLIT.md` - 模块拆分
+- `docs/SCHEMA.md` - 数据库设计
+
+完成后告诉我，然后进入下一步。
+
+---
+
+# 步骤 2：确认技术栈
+
+使用 question 工具确认技术栈：
+
+```
+{
+  "questions": [
+    {
+      "header": "Web框架",
+      "question": "选择 Web 框架：",
+      "options": [
+        {"label": "FastAPI", "description": "现代、快速的 Python Web 框架"},
+        {"label": "Flask", "description": "轻量级 Python Web 框架"},
+        {"label": "Django", "description": "全功能 Python Web 框架"}
+      ]
+    },
+    {
+      "header": "数据库",
+      "question": "选择数据库：",
+      "options": [
+        {"label": "PostgreSQL", "description": "功能强大的开源关系数据库"},
+        {"label": "MySQL", "description": "流行的开源关系数据库"},
+        {"label": "SQLite", "description": "轻量级嵌入式数据库"}
+      ]
+    },
+    {
+      "header": "ORM",
+      "question": "选择 ORM：",
+      "options": [
+        {"label": "SQLAlchemy", "description": "Python 最流行的 ORM"},
+        {"label": "Tortoise ORM", "description": "异步 ORM，类似 Django"},
+        {"label": "Django ORM", "description": "Django 内置 ORM"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 3：确认项目结构
+
+使用 question 工具确认项目结构：
+
+```
+{
+  "questions": [
+    {
+      "header": "项目结构",
+      "question": "选择项目结构：",
+      "options": [
+        {"label": "DDD分层", "description": "models/repositories/services/api 分层"},
+        {"label": "MVC", "description": "models/views/controllers 结构"},
+        {"label": "六边形架构", "description": "domain/application/infrastructure 分层"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 4：生成项目目录结构
+
+创建项目目录：
+
+```bash
+# 创建项目目录
+mkdir -p src/api src/services src/repositories src/models src/schemas src/core src/utils
+mkdir -p tests/models tests/repositories tests/services tests/api tests/integration tests/e2e
+mkdir -p scripts docs modules
+mkdir -p reports
+
+# 创建 Python 包标记
+touch src/__init__.py
+touch src/api/__init__.py
+touch src/services/__init__.py
+touch src/repositories/__init__.py
+touch src/models/__init__.py
+touch src/schemas/__init__.py
+touch src/core/__init__.py
+touch src/utils/__init__.py
+touch tests/__init__.py
+```
+
+---
+
+# 步骤 5：生成 requirements.txt
+
+生成项目依赖：
+
+```txt
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# Database
+sqlalchemy==2.0.35
+alembic==1.13.3
+psycopg2-binary==2.9.9
+
+# Validation
+pydantic==2.9.2
+pydantic-settings==2.6.0
+email-validator==2.2.0
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.12
+
+# Utils
+python-dotenv==1.0.1
+
+# Testing
+pytest==8.3.3
+pytest-cov==6.0.0
+pytest-asyncio==0.24.0
+pytest-mock==3.14.0
+httpx==0.27.2
+
+# Development
+black==24.10.0
+isort==5.13.2
+mypy==1.13.0
+flake8==7.1.1
+```
+
+---
+
+# 步骤 6：生成配置文件
+
+### 6.1 生成 `.env.example`
+
+```bash
+# Application
+APP_NAME={项目名称}
+APP_VERSION=0.1.0
+DEBUG=True
+ENVIRONMENT=development
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+DATABASE_POOL_SIZE=10
+DATABASE_MAX_OVERFLOW=20
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Security
+SECRET_KEY=your-secret-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# CORS
+CORS_ORIGINS=["http://localhost:3000"]
+```
+
+### 6.2 生成 `src/core/config.py`
+
+```python
+from pydantic_settings import BaseSettings
+from typing import List
+
+class Settings(BaseSettings):
+    """应用配置"""
+
+    # Application
+    app_name: str = "My App"
+    app_version: str = "0.1.0"
+    debug: bool = True
+    environment: str = "development"
+
+    # Server
+    host: str = "0.0.0.0"
+    port: int = 8000
+
+    # Database
+    database_url: str
+    database_pool_size: int = 10
+    database_max_overflow: int = 20
+
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Security
+    secret_key: str
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
+    # CORS
+    cors_origins: List[str] = ["http://localhost:3000"]
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+settings = Settings()
+```
+
+---
+
+# 步骤 7：生成数据库配置
+
+创建 `src/core/database.py`：
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from typing import Generator
+from src.core.config import settings
+
+# 创建引擎
+engine = create_engine(
+    settings.database_url,
+    pool_size=settings.database_pool_size,
+    max_overflow=settings.database_max_overflow,
+    echo=settings.debug,
+)
+
+# 创建会话工厂
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 声明基类
+Base = declarative_base()
+
+def get_db() -> Generator[Session, None, None]:
+    """获取数据库会话"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def init_db():
+    """初始化数据库"""
+    Base.metadata.create_all(bind=engine)
+```
+
+---
+
+# 步骤 8：生成 main.py
+
+创建项目入口文件 `main.py`：
+
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from src.core.config import settings
+from src.core.database import init_db
+from src.api.health import router as health_router
+
+# 创建应用
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    debug=settings.debug,
+)
+
+# CORS 中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 注册路由
+app.include_router(health_router)
+
+# 启动事件
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时执行"""
+    init_db()
+
+# 健康检查
+@app.get("/")
+async def root():
+    return {"message": f"Welcome to {settings.app_name}"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+    )
+```
+
+---
+
+# 步骤 9：生成健康检查 API
+
+创建 `src/api/health.py`：
+
+```python
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from src.core.database import get_db
+
+router = APIRouter(prefix="/health", tags=["Health"])
+
+@router.get("/")
+async def health_check():
+    """健康检查"""
+    return {"status": "healthy"}
+
+@router.get("/db")
+async def check_database(db: Session = Depends(get_db)):
+    """数据库健康检查"""
+    try:
+        db.execute("SELECT 1")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": str(e)}
+```
+
+---
+
+# 步骤 10：生成测试配置
+
+### 10.1 生成 `pytest.ini`
+
+```ini
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts =
+    -v
+    --strict-markers
+    --cov=src
+    --cov-report=term-missing
+    --cov-report=html
+    --html=reports/pytest_report.html
+    --self-contained-html
+markers =
+    unit: Unit tests
+    integration: Integration tests
+    e2e: End-to-end tests
+    slow: Slow running tests
+```
+
+### 10.2 生成 `tests/conftest.py`
+
+```python
+import pytest
+from typing import Generator
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from fastapi.testclient import TestClient
+from src.main import app
+from src.core.database import Base, get_db
+
+# 测试数据库
+TEST_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(
+    TEST_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@pytest.fixture(scope="function")
+def db() -> Generator[Session, None, None]:
+    """测试数据库会话"""
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture(scope="function")
+def client(db: Session) -> Generator[TestClient, None, None]:
+    """测试客户端"""
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+```
+
+---
+
+# 步骤 11：生成 Alembic 配置
+
+初始化 Alembic：
+
+```bash
+alembic init alembic
+```
+
+配置 `alembic/env.py`：
+
+```python
+from logging.config import fileConfig
+from sqlalchemy import engine_from_config, pool
+from alembic import context
+from src.core.config import settings
+from src.models.base import Base  # 导入模型基类
+
+# Alembic Config 对象
+config = context.config
+
+# 设置数据库 URL
+config.set_main_option("sqlalchemy.url", settings.database_url)
+
+# 解释配置文件中的 Python 日志配置
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# 添加模型的 MetaData
+target_metadata = Base.metadata
+```
+
+---
+
+# 步骤 12：生成辅助脚本
+
+创建 `scripts/` 目录下的辅助脚本：
+
+### 12.1 生成 `scripts/run_tests.sh`
+
+```bash
+#!/bin/bash
+# 运行所有测试
+
+echo "Running tests..."
+pytest tests/ -v \
+    --cov=src \
+    --cov-report=html \
+    --cov-report=term-missing \
+    --html=reports/pytest_report.html \
+    --self-contained-html
+
+echo "Test report generated: reports/pytest_report.html"
+echo "Coverage report generated: htmlcov/index.html"
+```
+
+### 12.2 生成 `scripts/generate_test_report.py`
+
+```python
+#!/usr/bin/env python3
+"""生成测试报告"""
+
+import json
+from datetime import datetime
+from pathlib import Path
+
+def generate_test_report(layer: str):
+    """生成指定层的测试报告"""
+    report_dir = Path("reports")
+    report_dir.mkdir(exist_ok=True)
+
+    report_file = report_dir / f"{layer}_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+
+    # 读取 pytest 结果
+    # TODO: 从 pytest json 报告读取
+
+    with open(report_file, "w") as f:
+        f.write(f"# {layer} Test Report\n\n")
+        f.write(f"Generated: {datetime.now().isoformat()}\n\n")
+        # TODO: 添加更多报告内容
+
+    print(f"Test report generated: {report_file}")
+
+if __name__ == "__main__":
+    import sys
+    layer = sys.argv[1] if len(sys.argv) > 1 else "all"
+    generate_test_report(layer)
+```
+
+---
+
+# 步骤 13：验证基础设施
+
+运行验证命令：
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行健康检查测试
+pytest tests/api/test_health.py -v
+
+# 启动服务
+uvicorn main:app --reload
+```
+
+验证清单：
+- [ ] 项目目录结构正确
+- [ ] 依赖安装成功
+- [ ] 健康检查 API 正常
+- [ ] 数据库连接正常
+- [ ] 测试配置正常
+
+---
+
+# 步骤 14：提交基础设施代码
+
+```bash
+git add .
+git commit -m "feat: initialize project infrastructure
+
+- Create project structure
+- Add requirements.txt
+- Add configuration files
+- Set up database connection
+- Add health check API
+- Configure pytest
+
+Ready for module implementation"
+```
+
+---
+
+# 阶段衔接
+
+基础设施搭建完成后，请提示我：
+
+```
+{
+  "questions": [
+    {
+      "header": "下一步",
+      "question": "基础设施已搭建完成！接下来：",
+      "options": [
+        {"label": "L15: 数据模型", "description": "开始实现各模块的数据模型"},
+        {"label": "验证环境", "description": "运行健康检查验证环境"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 开始执行
+
+现在请开始**步骤 1**，读取项目配置。
