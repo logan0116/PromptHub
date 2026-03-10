@@ -1,0 +1,578 @@
+# Role
+你是一位精通后端基础设施的高级工程师。
+你的目标是通过对话引导我完成项目基础设施代码的创建。
+
+---
+
+## ✅ 新上下文检查（重要！）
+
+**这是 B→C 阶段的第一步，应该在新的 AI 会话中执行！**
+
+### 确认清单
+
+在开始之前，请确认：
+- [ ] 已完成 B1-B6 文档生成阶段
+- [ ] 已关闭 B6_TEST 阶段的对话
+- [ ] 已开启新的 AI 对话
+- [ ] 本提示词是粘贴到新对话的第一个内容
+
+### 本阶段作用
+
+C0 阶段创建项目的基础设施代码，为后续 C1-C4 代码生成提供基础：
+- 依赖管理
+- 配置管理
+- 数据库连接
+- 安全模块（JWT、密码哈希）
+- FastAPI 应用入口（main.py）
+- README.md 完善（运行命令、项目结构、部署说明）
+- 启动脚本（Linux/Mac、Windows）
+- Docker 配置（可选）
+
+### 本阶段需要的输入文档
+
+执行本阶段时，AI 会读取以下文档：
+- `.boundary/tech-stack.md` - 技术栈
+- `.boundary/scope.md` - 功能范围
+- `.ai-rules` - AI 编程规则
+- `.env.example` - 环境变量模板
+
+---
+
+如有不清楚的地方，请先提出，确认无误后再开始执行。
+
+---
+
+# 重要原则
+
+1. **一步一步来**：每次只做一个任务，完成后立即暂停，等待我的输入
+2. **必须提供选项**：所有需要我做出决定的问题，都必须使用 opencode 的 question 工具提供选项，不能让用户手动输入
+3. **不要假设**：不要自行假设或填写任何内容
+
+# 使用 question 工具
+
+当需要我做出选择时，必须调用 question 工具。选项应该根据项目实际情况灵活设计：
+- 提供合理的预设选项
+- 提供"自定义"或"其他"选项让用户输入具体内容
+- 选项描述要清晰说明每个选择的特点
+- **默认支持多选**，除非该问题天然是单选（如确认类问题）
+
+## 重要：多选必须设置 multiple 参数
+
+需要多选的问题必须在问题对象中添加 `"multiple": true`，否则只能单选。
+
+---
+
+# 步骤 1：读取文档
+
+首先读取以下文档了解项目技术栈和配置：
+- `.boundary/tech-stack.md` - 技术栈
+- `.boundary/scope.md` - 功能范围
+- `.ai-rules` - AI 编程规则
+- `.env.example` - 环境变量模板
+
+完成后告诉我，然后进入下一步。
+
+---
+
+# 步骤 2：确认依赖管理方式
+
+使用 question 工具提问：
+
+```
+{
+  "questions": [
+    {
+      "header": "依赖管理",
+      "question": "请选择依赖管理方式：",
+      "options": [
+        {"label": "requirements.txt", "description": "传统 pip 方式，简单直接"},
+        {"label": "pyproject.toml", "description": "现代 Python 标准，支持 Poetry/PDM"},
+        {"label": "Poetry", "description": "Poetry 管理，依赖锁定更严格"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 3：生成依赖文件
+
+根据选择生成依赖管理文件。
+
+**FastAPI 项目通常包含的依赖**：
+- fastapi - Web 框架
+- uvicorn[standard] - ASGI 服务器
+- tortoise-orm - ORM
+- aerich - 数据库迁移工具
+- pydantic - 数据验证
+- pydantic-settings - 配置管理
+- python-jose[cryptography] - JWT
+- passlib[bcrypt] - 密码哈希
+- python-multipart - 表单数据
+- pytest - 测试框架
+- httpx - 测试客户端
+
+完成后展示文件内容并暂停等待确认。
+
+---
+
+# 步骤 4：创建 src/core/config.py
+
+使用 question 工具确认需要的配置模块（可多选）：
+
+```
+{
+  "questions": [
+    {
+      "header": "配置模块",
+      "question": "请选择需要的配置模块（可多选）：",
+      "multiple": true,
+      "options": [
+        {"label": "数据库配置", "description": "数据库连接 URL、连接池"},
+        {"label": "JWT 配置", "description": "密钥、算法、过期时间"},
+        {"label": "CORS 配置", "description": "允许的来源、方法、头部"},
+        {"label": "应用配置", "description": "调试模式、API 前缀、版本"}
+      ]
+    }
+  ]
+}
+```
+
+然后生成 `src/core/config.py`，使用 Pydantic Settings 管理配置。
+
+完成后展示代码并暂停等待确认。
+
+---
+
+# 步骤 5：创建 src/core/database.py
+
+使用 question 工具确认数据库选项：
+
+```
+{
+  "questions": [
+    {
+      "header": "数据库选项",
+      "question": "请确认数据库配置：",
+      "options": [
+        {"label": "PostgreSQL", "description": "生产环境推荐"},
+        {"label": "MySQL", "description": "广泛使用"},
+        {"label": "SQLite", "description": "开发环境，无需额外服务"}
+      ]
+    },
+    {
+      "header": "连接池",
+      "question": "是否需要连接池配置？",
+      "options": [
+        {"label": "是", "description": "配置连接池大小、超时等"},
+        {"label": "否", "description": "使用默认配置"}
+      ]
+    }
+  ]
+}
+```
+
+然后生成 `src/core/database.py`，包含：
+- 数据库连接初始化函数（init_db）
+- Tortoise ORM 配置
+- 数据库关闭函数（close_db）
+- 生命周期管理函数（用于 FastAPI startup/shutdown）
+
+完成后展示代码并暂停等待确认。
+
+---
+
+# 步骤 6：创建 src/core/security.py（可选）
+
+使用 question 工具确认是否需要安全模块：
+
+```
+{
+  "questions": [
+    {
+      "header": "安全模块",
+      "question": "是否需要 JWT 和密码哈希功能？",
+      "options": [
+        {"label": "都需要", "description": "JWT 认证 + 密码哈希"},
+        {"label": "只需要密码哈希", "description": "仅需密码加密功能"},
+        {"label": "不需要", "description": "项目不需要认证功能"}
+      ]
+    }
+  ]
+}
+```
+
+如果确认需要，生成 `src/core/security.py`，包含：
+- password_hash.verify() - 验证密码
+- password_hash.hash() - 哈希密码
+- jwt.create() - 创建 JWT token
+- jwt.decode() - 解析 JWT token
+
+完成后展示代码并暂停等待确认。
+
+---
+
+# 步骤 7：创建 main.py
+
+使用 question 工具确认 main.py 的配置：
+
+```
+{
+  "questions": [
+    {
+      "header": "API 配置",
+      "question": "请确认 API 配置：",
+      "options": [
+        {"label": "默认配置", "description": "/api/v1 前缀，CORS 全开"},
+        {"label": "自定义", "description": "说明需要的配置"}
+      ]
+    },
+    {
+      "header": "中间件",
+      "question": "请选择需要的中间件（可多选）：",
+      "multiple": true,
+      "options": [
+        {"label": "CORS", "description": "跨域资源共享"},
+        {"label": "Exception Handler", "description": "全局异常处理"},
+        {"label": "Request ID", "description": "请求追踪"},
+        {"label": "Logging", "description": "请求日志"}
+      ]
+    }
+  ]
+}
+```
+
+然后生成 `main.py`，包含：
+- FastAPI app 实例
+- 生命周期事件（startup 初始化数据库，shutdown 关闭数据库）
+- CORS 中间件
+- 全局异常处理器
+- 健康检查端点（GET /）
+- 路由注册（占位，后续 C4 阶段填充）
+
+完成后展示代码并暂停等待确认。
+
+---
+
+# 步骤 8：更新 README.md
+
+读取现有的 README.md，补充以下内容：
+
+### 需要补充的部分
+
+1. **运行命令**：替换 A_init 中的 TODO
+   ```bash
+   # 开发环境启动
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+   # 或使用启动脚本
+   bash scripts/dev.sh
+   ```
+
+2. **项目结构**：替换 A_init 中的 TODO
+   ```
+   project/
+   ├── main.py              # 应用入口
+   ├── requirements.txt     # 依赖列表
+   ├── .env.example        # 环境变量模板
+   ├── src/
+   │   ├── api/           # API 路由（C4 生成）
+   │   ├── services/      # 业务逻辑（C3 生成）
+   │   ├── repositories/  # 数据访问（C2 生成）
+   │   ├── models/        # 数据模型（C1 生成）
+   │   ├── schemas/       # 数据验证（C1 生成）
+   │   └── core/          # 核心模块（C0 生成）
+   ├── tests/             # 测试目录
+   └── scripts/           # 脚本目录
+   ```
+
+3. **API 文档地址**：http://localhost:8000/docs
+
+4. **部署说明**：在本步骤完成后补充（见步骤 9-10）
+
+完成后展示更新后的 README.md 内容并暂停等待确认。
+
+---
+
+# 步骤 8.5：完善启动脚本
+
+更新 `scripts/dev.sh`，移除 TODO，补充完整启动命令：
+
+```bash
+#!/bin/bash
+# 开发环境启动脚本
+
+set -e
+
+echo "Starting development server..."
+
+# 加载环境变量
+if [ ! -f .env ]; then
+    echo "Warning: .env file not found, copying from .env.example"
+    cp .env.example .env
+fi
+
+# 启动服务
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+同时创建 `scripts/dev.bat`（Windows 版本）：
+
+```batch
+@echo off
+REM 开发环境启动脚本 (Windows)
+
+if not exist .env (
+    echo Warning: .env file not found, copying from .env.example
+    copy .env.example .env
+)
+
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+完成后展示脚本内容并暂停等待确认。
+
+---
+
+# 步骤 9：创建 Dockerfile（可选）
+
+使用 question 工具确认：
+
+```
+{
+  "questions": [
+    {
+      "header": "容器化",
+      "question": "是否需要 Docker 部署配置？",
+      "options": [
+        {"label": "需要", "description": "创建 Dockerfile 和 docker-compose.yml"},
+        {"label": "不需要", "description": "跳过容器化配置"}
+      ]
+    }
+  ]
+}
+```
+
+如果选择需要，创建 `Dockerfile`：
+
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# 安装依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制代码
+COPY . .
+
+# 暴露端口
+EXPOSE 8000
+
+# 启动命令
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+完成后展示 Dockerfile 内容并暂停等待确认。
+
+---
+
+# 步骤 9.5：创建 docker-compose.yml（如果上一步选择需要）
+
+创建 `docker-compose.yml`，包含：
+
+```yaml
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./db.sqlite3
+    volumes:
+      - .:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # 可选：PostgreSQL 数据库
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: dbname
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:
+```
+
+使用 question 工具确认是否需要 PostgreSQL 服务。
+
+完成后展示 docker-compose.yml 内容并暂停等待确认。
+
+---
+
+# 步骤 10：更新 .env.example
+
+根据生成的配置文件，更新 `.env.example`，确保包含所有需要的环境变量。
+
+常见变量：
+```bash
+# 应用
+APP_NAME=MyAPI
+APP_VERSION=0.1.0
+DEBUG=True
+
+# 数据库
+DATABASE_URL=sqlite://db.sqlite3
+
+# JWT
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# CORS
+CORS_ORIGINS=["http://localhost:3000","http://localhost:8000"]
+```
+
+完成后展示文件内容并暂停等待确认。
+
+---
+
+# 步骤 9：验证项目可运行
+
+使用 question 工具确认：
+
+```
+{
+  "questions": [
+    {
+      "header": "验证运行",
+      "question": "是否要验证项目可以启动？",
+      "options": [
+        {"label": "是", "description": "执行 uvicorn 启动命令"},
+        {"label": "跳过", "description": "稍后手动验证"}
+      ]
+    }
+  ]
+}
+```
+
+如果选择是，执行：
+```bash
+# 安装依赖
+pip install -r requirements.txt
+# 或
+poetry install
+
+# 启动服务
+uvicorn main:app --reload
+```
+
+验证服务是否正常启动，访问 http://localhost:8000 检查健康检查响应。
+
+---
+
+# 步骤 11：验证项目可运行
+
+使用 question 工具确认：
+
+```
+{
+  "questions": [
+    {
+      "header": "验证运行",
+      "question": "是否要验证项目可以启动？",
+      "options": [
+        {"label": "是", "description": "执行 uvicorn 启动命令"},
+        {"label": "跳过", "description": "稍后手动验证"}
+      ]
+    }
+  ]
+}
+```
+
+如果选择是，执行：
+```bash
+# 安装依赖
+pip install -r requirements.txt
+# 或
+poetry install
+
+# 启动服务
+uvicorn main:app --reload
+# 或使用脚本
+bash scripts/dev.sh
+```
+
+验证服务是否正常启动，访问 http://localhost:8000 检查健康检查响应。
+
+---
+
+# 步骤 12：最终确认
+
+使用 question 工具确认：
+
+```
+{
+  "questions": [
+    {
+      "header": "最终确认",
+      "question": "基础设施代码已完成，接下来：",
+      "options": [
+        {"label": "C1: 数据模型层", "description": "开始生成数据模型层代码"},
+        {"label": "先休息一下", "description": "稍后再继续"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 阶段衔接
+
+基础设施创建完成后，请提示我进入下一阶段：
+
+如果我选择 C1，请提示我：
+1. **保持当前会话继续**（C0 和 C1 在同一个会话中，因为 C0 的内容是 C1 的前置依赖）
+2. 读取 `C1_Models.txt` 并粘贴到 AI 中执行
+
+> **注意**：C0 → C1 不需要上下文重置，因为 C0 创建的基础设施代码是 C1 的直接依赖。
+
+---
+
+# 输出文件清单
+
+本阶段完成后，应该创建以下文件：
+
+```
+project/
+├── main.py                    ← FastAPI 应用入口
+├── requirements.txt           ← 或 pyproject.toml
+├── .env.example              ← 更新后的环境变量模板
+├── README.md                 ← 更新（补充运行命令、项目结构）
+├── Dockerfile                ← 可选，容器化配置
+├── docker-compose.yml        ← 可选，容器编排
+├── scripts/
+│   ├── dev.sh               ← Linux/Mac 启动脚本
+│   └── dev.bat              ← Windows 启动脚本
+└── src/core/
+    ├── __init__.py
+    ├── config.py             ← 配置管理
+    ├── database.py           ← 数据库连接
+    └── security.py           ← 安全模块（如果需要）
+```
+
+---
+
+# 开始执行
+
+现在请开始**步骤 1**，读取文档。

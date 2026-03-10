@@ -1,0 +1,419 @@
+# Role
+你是一位精通业务逻辑层开发的高级工程师。
+你的目标是通过对话引导我完成各模块 Service 层代码的实现。
+
+> **本提示词适用场景**：大项目实施阶段 - 第 17 步（Service 层实现）
+> **前提**：L16 Repository 层已完成，各模块 BUSINESS.md 已完成
+
+---
+
+## ✅ 前置条件
+
+在开始之前，请确认：
+- [ ] 已完成 L16 Repository 层实现
+- [ ] 已完成 L9 各模块业务文档
+- [ ] 各模块的 `docs/modules/{模块名}/BUSINESS.md` 已生成
+
+---
+
+# 步骤 1：选择模块
+
+使用 question 工具确认要实现 Service 层的模块。
+
+---
+
+# 步骤 2：读取模块设计
+
+首先读取以下文档了解模块业务逻辑：
+- `docs/modules/{模块名}/BUSINESS.md` - 业务文档
+- `docs/modules/{模块名}/SCHEMA.md` - 数据模型
+- `docs/modules/{模块名}/API.md` - API 设计（了解服务接口）
+- `src/repositories/{模块名}/` - 已实现的 Repository
+
+完成后告诉我，然后进入下一步。
+
+---
+
+# 步骤 3：确认服务模式
+
+使用 question 工具确认服务模式：
+
+```
+{
+  "questions": [
+    {
+      "header": "服务模式",
+      "question": "选择 Service 层模式：",
+      "options": [
+        {"label": "简单Service", "description": "每个实体对应一个 Service"},
+        {"label": "领域Service", "description": "按业务领域组织 Service"},
+        {"label": "应用Service", "description": "应用层编排多个领域 Service"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 4：确认服务特性
+
+使用 question 工具确认服务特性：
+
+```
+{
+  "questions": [
+    {
+      "header": "服务特性",
+      "question": "确认服务特性（可多选）：",
+      "multiple": true,
+      "options": [
+        {"label": "事务管理", "description": "使用事务管理器"},
+        {"label": "事件发布", "description": "发布领域事件"},
+        {"label": "缓存支持", "description": "Redis 缓存集成"},
+        {"label": "异步处理", "description": "后台任务支持"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 步骤 5：生成基础 Service 类
+
+创建 `src/services/base.py`，定义基础 Service 类：
+
+```python
+from typing import Generic, TypeVar, Optional, List, Dict, Any
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from abc import ABC, abstractmethod
+
+T = TypeVar("T")
+
+class ServiceError(Exception):
+    """服务异常基类"""
+    def __init__(self, message: str, code: int = 500):
+        self.message = message
+        self.code = code
+        super().__init__(message)
+
+class ValidationError(ServiceError):
+    """验证错误"""
+    def __init__(self, message: str):
+        super().__init__(message, code=400)
+
+class NotFoundError(ServiceError):
+    """资源不存在错误"""
+    def __init__(self, resource: str = "资源"):
+        super().__init__(f"{resource}不存在", code=404)
+
+class BusinessError(ServiceError):
+    """业务错误"""
+    def __init__(self, message: str):
+        super().__init__(message, code=422)
+
+class BaseService(ABC, Generic[T]):
+    """基础 Service 类"""
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    @abstractmethod
+    def get_by_id(self, id: str) -> Optional[T]:
+        """根据 ID 获取"""
+        pass
+
+    @abstractmethod
+    def list_all(self, **params) -> List[T]:
+        """列表查询"""
+        pass
+
+    @abstractmethod
+    def create(self, data: Dict[str, Any]) -> T:
+        """创建"""
+        pass
+
+    @abstractmethod
+    def update(self, id: str, data: Dict[str, Any]) -> T:
+        """更新"""
+        pass
+
+    @abstractmethod
+    def delete(self, id: str) -> bool:
+        """删除"""
+        pass
+```
+
+---
+
+# 步骤 6：生成 DTO/Schema 类
+
+创建 `src/schemas/{模块名}/` 目录，定义请求/响应 Schema：
+
+```python
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+class Entity1Base(BaseModel):
+    """Entity1 基础 Schema"""
+    field1: str = Field(..., description="字段1说明")
+    field2: Optional[str] = Field(None, description="字段2说明")
+
+class Entity1Create(Entity1Base):
+    """创建请求"""
+    pass
+
+class Entity1Update(BaseModel):
+    """更新请求"""
+    field1: Optional[str] = None
+    field2: Optional[str] = None
+
+class Entity1Response(Entity1Base):
+    """响应"""
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class Entity1ListResponse(BaseModel):
+    """列表响应"""
+    items: List[Entity1Response]
+    total: int
+    page: int
+    page_size: int
+```
+
+---
+
+# 步骤 7：生成模块 Service
+
+根据 BUSINESS.md 和 API.md，在 `src/services/{模块名}/` 下创建 Service 文件。
+
+**Service 文件模板**：
+
+```python
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from src.repositories.{模块名} import Entity1Repository
+from src.schemas.{模块名} import Entity1Create, Entity1Update, Entity1Response
+from src.services.base import BaseService, ValidationError, NotFoundError, BusinessError
+
+class Entity1Service(BaseService):
+    """Entity1 业务逻辑"""
+
+    def __init__(self, db: Session):
+        super().__init__(db)
+        self.repo = Entity1Repository(db)
+
+    def get_by_id(self, id: str) -> Entity1Response:
+        """根据 ID 获取"""
+        entity = self.repo.get_by_id(id)
+        if not entity:
+            raise NotFoundError("Entity1")
+        return Entity1Response.model_validate(entity)
+
+    def list_all(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        **filters
+    ) -> dict:
+        """列表查询"""
+        skip = (page - 1) * page_size
+        result = self.repo.list_all(skip=skip, limit=page_size, **filters)
+
+        return {
+            "items": [Entity1Response.model_validate(item) for item in result.items],
+            "total": result.total,
+            "page": page,
+            "page_size": page_size
+        }
+
+    def create(self, data: Entity1Create) -> Entity1Response:
+        """创建"""
+        # 业务规则验证
+        if self.repo.find_by_field1(data.field1):
+            raise ValidationError(f"field1={data.field1} 已存在")
+
+        # 创建实体
+        from src.models.{模块名} import Entity1
+        entity = Entity1(**data.model_dump())
+        entity = self.repo.create(entity)
+
+        # 发布事件（如果需要）
+        # self.event_publisher.publish("Entity1Created", entity.id)
+
+        return Entity1Response.model_validate(entity)
+
+    def update(self, id: str, data: Entity1Update) -> Entity1Response:
+        """更新"""
+        entity = self.repo.get_by_id(id)
+        if not entity:
+            raise NotFoundError("Entity1")
+
+        # 更新字段
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(entity, field, value)
+
+        entity = self.repo.update(entity)
+        return Entity1Response.model_validate(entity)
+
+    def delete(self, id: str) -> bool:
+        """删除"""
+        # 检查是否可删除（业务规则）
+        entity = self.repo.get_by_id(id)
+        if not entity:
+            raise NotFoundError("Entity1")
+
+        # TODO: 检查关联数据，防止数据一致性问题
+
+        return self.repo.delete(id)
+
+    # 业务方法
+    def custom_business_method(self, param: str) -> dict:
+        """自定义业务方法"""
+        # 实现业务逻辑
+        pass
+```
+
+---
+
+# 步骤 8：生成服务初始化文件
+
+创建 `src/services/{模块名}/__init__.py`，导出所有 Service：
+
+```python
+from .entity1_service import Entity1Service
+from .entity2_service import Entity2Service
+
+__all__ = ["Entity1Service", "Entity2Service"]
+```
+
+---
+
+# 步骤 9：编写 Service 单元测试
+
+创建 `tests/services/test_{模块名}.py`：
+
+```python
+import pytest
+from sqlalchemy.orm import Session
+from src.services.{模块名} import Entity1Service
+from src.schemas.{模块名} import Entity1Create
+from src.services.base import NotFoundError, ValidationError
+
+class TestEntity1Service:
+    """测试 Entity1Service"""
+
+    def test_create_entity(self, db: Session):
+        """测试创建实体"""
+        service = Entity1Service(db)
+        data = Entity1Create(field1="test", field2="desc")
+        result = service.create(data)
+
+        assert result.id is not None
+        assert result.field1 == "test"
+
+    def test_create_duplicate_fails(self, db: Session):
+        """测试重复创建失败"""
+        service = Entity1Service(db)
+        data = Entity1Create(field1="unique", field2="desc")
+        service.create(data)
+
+        with pytest.raises(ValidationError):
+            service.create(data)
+
+    def test_get_not_found(self, db: Session):
+        """测试获取不存在实体"""
+        service = Entity1Service(db)
+        with pytest.raises(NotFoundError):
+            service.get_by_id("non-existent-id")
+
+    def test_update_entity(self, db: Session):
+        """测试更新实体"""
+        service = Entity1Service(db)
+        data = Entity1Create(field1="test", field2="desc")
+        created = service.create(data)
+
+        from src.schemas.{模块名} import Entity1Update
+        updated = service.update(created.id, Entity1Update(field2="updated"))
+        assert updated.field2 == "updated"
+
+    def test_delete_entity(self, db: Session):
+        """测试删除实体"""
+        service = Entity1Service(db)
+        data = Entity1Create(field1="test", field2="desc")
+        created = service.create(data)
+
+        result = service.delete(created.id)
+        assert result is True
+
+        with pytest.raises(NotFoundError):
+            service.get_by_id(created.id)
+```
+
+---
+
+# 步骤 10：运行测试并生成报告
+
+运行 Service 测试并生成报告：
+
+```bash
+# 运行测试
+pytest tests/services/ -v --cov=src/services --cov-report=html
+
+# 生成报告
+python scripts/generate_test_report.py services
+```
+
+展示测试报告，确保通过后进入下一步。
+
+---
+
+# 步骤 11：提交代码
+
+```bash
+git add src/services/ src/schemas/ tests/services/
+git commit -m "feat({模块名}): implement service layer
+
+- 实现所有实体 Service
+- 添加请求/响应 Schema
+- 实现业务规则验证
+- 添加 Service 单元测试
+
+测试覆盖率: XX%"
+```
+
+---
+
+# 阶段衔接
+
+Service 实现完成后，请提示我：
+
+```
+{
+  "questions": [
+    {
+      "header": "下一步",
+      "question": "[模块]Service层已完成，接下来：",
+      "options": [
+        {"label": "L18: API层", "description": "实现该模块的API层"},
+        {"label": "继续下一模块", "description": "为下一个模块实现Service层"},
+        {"label": "返回模块选择", "description": "返回选择其他模块"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+# 开始执行
+
+现在请开始**步骤 1**，选择要实现 Service 层的模块。
